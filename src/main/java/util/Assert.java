@@ -8,4 +8,10 @@ public abstract class Assert {
             throw new ExcelRWException("can not start with zero");
         }
     }
+
+    public static void notNull(Object object) throws ExcelRWException {
+        if (object == null) {
+            throw new ExcelRWException("this argument is required; it must not be null");
+        }
+    }
 }

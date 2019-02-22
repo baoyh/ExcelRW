@@ -1,6 +1,6 @@
 package exception;
 
-public class ExcelRWException extends Exception{
+public class ExcelRWException extends Exception {
     public ExcelRWException() {
     }
 
