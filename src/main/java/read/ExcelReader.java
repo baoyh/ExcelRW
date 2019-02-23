@@ -6,6 +6,7 @@ import util.Assert;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.function.Function;
 
 public abstract class ExcelReader {
 
@@ -72,5 +73,6 @@ public abstract class ExcelReader {
 
     }
 
-    public abstract List<List<List<String>>> read(InputStream in) throws ExcelRWException, IOException;
+    public abstract <R> List<List<R>> read(InputStream in, Function<List<String>, R> function) throws IOException;
+
 }
