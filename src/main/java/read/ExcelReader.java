@@ -11,10 +11,10 @@ public abstract class ExcelReader {
 
     public static class Builder {
         private List<String> sheets;
-        private int fromRow;
-        private int toRow;
-        private short fromColumn;
-        private short toColumn;
+        private int fromRow = -1;
+        private int rowLength = -1;
+        private int fromColumn = -1;
+        private int columnLength = -1;
 
         public Builder sheets(List<String> names) throws ExcelRWException {
             Assert.notNull(names);
@@ -28,20 +28,34 @@ public abstract class ExcelReader {
             return this;
         }
 
-        public Builder toRow(int i) {
-            this.toRow = i;
+        public Builder rowLength(int i) throws ExcelRWException {
+            Assert.greaterThanZero(i);
+            this.rowLength = i;
             return this;
         }
 
-        public Builder fromColumn(short i) throws ExcelRWException {
+        public Builder fromColumn(int i) throws ExcelRWException {
             Assert.greaterThanZero(i);
             this.fromColumn = i;
             return this;
         }
 
-        public Builder toColumn(short i) {
-            this.toColumn = i;
+        public Builder columnLength(int i) throws ExcelRWException {
+            Assert.greaterThanZero(i);
+            this.columnLength = i;
             return this;
+        }
+
+        public Builder build() {
+            return this;
+        }
+
+        public int getRowLength() {
+            return rowLength;
+        }
+
+        public int getColumnLength() {
+            return columnLength;
         }
 
         public List<String> getSheets() {
@@ -52,18 +66,11 @@ public abstract class ExcelReader {
             return fromRow;
         }
 
-        public int getToRow() {
-            return toRow;
-        }
-
-        public short getFromColumn() {
+        public int getFromColumn() {
             return fromColumn;
         }
 
-        public short getToColumn() {
-            return toColumn;
-        }
     }
 
-    public abstract List<List<List<String>>> read(InputStream in, Builder builder) throws ExcelRWException, IOException;
+    public abstract List<List<List<String>>> read(InputStream in) throws ExcelRWException, IOException;
 }
