@@ -1,5 +1,7 @@
 package read;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFRow;
@@ -10,7 +12,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public final class XlsxReader extends ExcelReader {
 
@@ -21,9 +27,9 @@ public final class XlsxReader extends ExcelReader {
     }
 
     @Override
-    public <R> List<List<R>> read(InputStream in, Function<List<String>, R> function) throws IOException {
+    public <R> List<R> read(InputStream in, Function<List<String>, R> function) throws IOException {
         XSSFWorkbook xssfWorkbook = new XSSFWorkbook(in);
-        List<List<R>> list = new ArrayList<>();
+        List<R> list = new ArrayList<>();
         List<String> sheets = builder.getSheets();
         int rowLength = builder.getRowLength();
         int fromRow = builder.getFromRow();
@@ -33,11 +39,11 @@ public final class XlsxReader extends ExcelReader {
         if (sheets != null && !sheets.isEmpty()) {
             for (String sheetName : sheets) {
                 XSSFSheet sheet = xssfWorkbook.getSheet(sheetName);
-                list.add(readSheet(sheet, fromRow, rowLength, function));
+                list.addAll(readSheet(sheet, fromRow, rowLength, function));
             }
         } else {
             for (Sheet sheet : xssfWorkbook) {
-                list.add(readSheet((XSSFSheet) sheet, fromRow, rowLength, function));
+                list.addAll(readSheet((XSSFSheet) sheet, fromRow, rowLength, function));
             }
         }
         return list;
@@ -50,11 +56,9 @@ public final class XlsxReader extends ExcelReader {
             fromColumn = 0;
         }
         List<R> list = new ArrayList<>();
-        int toRow;
+        int toRow = fromRow + rowLength;
         if (rowLength < 0) {
-            toRow = sheet.getLastRowNum();
-        } else {
-            toRow = fromRow + rowLength;
+            toRow = sheet.getLastRowNum() + 1;
         }
         for (int i = fromRow; i < toRow; i++) {
             XSSFRow row = sheet.getRow(i);
@@ -64,17 +68,15 @@ public final class XlsxReader extends ExcelReader {
     }
 
     private <R> R readRow(XSSFRow row, int fromColumn, int columnLength, Function<List<String>, R> function) {
-        int toColumn;
+        int toColumn = fromColumn + columnLength;
         if (columnLength < 0) {
-            toColumn = row.getLastCellNum();
-        } else {
-            toColumn = fromColumn + columnLength;
+            toColumn = row.getLastCellNum() + 1;
         }
         List<String> list = new ArrayList<>();
         for (int i = fromColumn; i < toColumn; i++) {
             XSSFCell cell = row.getCell(i);
             if (cell != null) {
-                list.add(cell.toString());
+                list.add(builder.getCellFunction().apply(cell));
             }
         }
         return function.apply(list);
