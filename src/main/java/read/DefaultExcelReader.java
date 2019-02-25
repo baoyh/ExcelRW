@@ -1,11 +1,13 @@
 package read;
 
 import exception.ExcelRWException;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import type.Excel;
 import util.Assert;
 
 import java.io.IOException;
@@ -14,56 +16,69 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public final class XlsxReader extends ExcelReader {
+public final class DefaultExcelReader extends ExcelReader {
 
     private int toRow;
     private int toColumn;
     private Builder builder;
 
-    public XlsxReader(Builder builder) {
+    public DefaultExcelReader(Builder builder) {
         toRow = builder.getFromRow() + builder.getRowLength();
         toColumn = builder.getFromColumn() + builder.getColumnLength();
         this.builder = builder;
     }
 
     @Override
-    public <R> List<R> read(InputStream in, Function<List<String>, R> function) throws IOException, ExcelRWException {
+    public <R> List<R> read(InputStream in, Excel type, Function<List<String>, R> function) throws IOException, ExcelRWException {
         Assert.notNull(function);
-        XSSFWorkbook xssfWorkbook = new XSSFWorkbook(in);
+        Assert.notNull(in);
+        Workbook workbook = workbook(in, type);
         List<R> list = new ArrayList<>();
         List<String> sheets = builder.getSheets();
         if (sheets != null && !sheets.isEmpty()) {
             for (String sheetName : sheets) {
-                XSSFSheet sheet = xssfWorkbook.getSheet(sheetName);
+                Sheet sheet = workbook.getSheet(sheetName);
                 list.addAll(readSheet(sheet, function));
             }
         } else {
-            for (Sheet sheet : xssfWorkbook) {
-                list.addAll(readSheet((XSSFSheet) sheet, function));
+            for (Sheet sheet : workbook) {
+                list.addAll(readSheet(sheet, function));
             }
         }
         return list;
     }
 
-    private <R> List<R> readSheet(XSSFSheet sheet, Function<List<String>, R> function) {
+    private Workbook workbook(InputStream in, Excel type) throws IOException {
+        Workbook workbook = null;
+        switch (type) {
+            case XLS:
+                workbook = new HSSFWorkbook(in);
+                break;
+            case XLSX:
+                workbook = new XSSFWorkbook(in);
+                break;
+        }
+        return workbook;
+    }
+
+    private <R> List<R> readSheet(Sheet sheet, Function<List<String>, R> function) {
         List<R> list = new ArrayList<>();
         if (builder.getRowLength() < 0) {
             toRow = sheet.getLastRowNum() + 1;
         }
         for (int i = builder.getFromRow(); i < toRow; i++) {
-            XSSFRow row = sheet.getRow(i);
-            list.add(readRow(row, function));
+            list.add(readRow(sheet.getRow(i), function));
         }
         return list;
     }
 
-    private <R> R readRow(XSSFRow row, Function<List<String>, R> function) {
+    private <R> R readRow(Row row, Function<List<String>, R> function) {
         if (builder.getColumnLength() < 0) {
             toColumn = row.getLastCellNum() + 1;
         }
         List<String> list = new ArrayList<>();
         for (int i = builder.getFromColumn(); i < toColumn; i++) {
-            XSSFCell cell = row.getCell(i);
+            Cell cell = row.getCell(i);
             if (cell != null) {
                 list.add(builder.getCellFunction().apply(cell));
             }

@@ -2,6 +2,7 @@ package read;
 
 import exception.ExcelRWException;
 import org.apache.poi.ss.usermodel.Cell;
+import type.Excel;
 import util.Assert;
 
 import java.io.IOException;
@@ -11,7 +12,7 @@ import java.util.function.Function;
 
 public abstract class ExcelReader {
 
-    protected Function<List<String>, List<String>> DEFAULT_ROW_FUNCTION = Function.identity();
+    private Function<List<String>, List<String>> DEFAULT_ROW_FUNCTION = Function.identity();
 
     public static class Builder {
         private List<String> sheets;
@@ -95,10 +96,10 @@ public abstract class ExcelReader {
 
     }
 
-    public abstract <R> List<R> read(InputStream in, Function<List<String>, R> rowFunction) throws IOException, ExcelRWException;
+    public abstract <R> List<R> read(InputStream in, Excel type, Function<List<String>, R> rowFunction) throws IOException, ExcelRWException;
 
-    public List<List<String>> read(InputStream in) throws IOException, ExcelRWException {
-        return read(in, DEFAULT_ROW_FUNCTION);
+    public List<List<String>> read(InputStream in, Excel type) throws IOException, ExcelRWException {
+        return read(in, type, DEFAULT_ROW_FUNCTION);
     }
 
 }
