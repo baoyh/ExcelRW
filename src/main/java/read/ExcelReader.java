@@ -15,10 +15,11 @@ public abstract class ExcelReader {
 
     public static class Builder {
         private List<String> sheets;
-        private int fromRow = -1;
+        private int fromRow = 0;
         private int rowLength = -1;
-        private int fromColumn = -1;
+        private int fromColumn = 0;
         private int columnLength = -1;
+
         private Function<Cell, String> cellFunction = cell -> {
             switch (cell.getCellTypeEnum()) {
                 case NUMERIC:
@@ -91,11 +92,12 @@ public abstract class ExcelReader {
         public Function<Cell, String> getCellFunction() {
             return cellFunction;
         }
+
     }
 
-    public abstract <R> List<R> read(InputStream in, Function<List<String>, R> rowFunction) throws IOException;
+    public abstract <R> List<R> read(InputStream in, Function<List<String>, R> rowFunction) throws IOException, ExcelRWException;
 
-    public List<List<String>> read(InputStream in) throws IOException {
+    public List<List<String>> read(InputStream in) throws IOException, ExcelRWException {
         return read(in, DEFAULT_ROW_FUNCTION);
     }
 

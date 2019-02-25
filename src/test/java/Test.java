@@ -9,8 +9,6 @@ import java.util.function.Function;
 
 public class Test {
     public static void main(String[] args) throws ExcelRWException, IOException {
-        ExcelReader.Builder build = new ExcelReader.Builder().fromRow(0).build();
-        ExcelReader xlsxReader = new XlsxReader(build);
         Function<List<String>, Person> asPerson = list -> {
             Person p = new Person();
             p.name = list.get(0);
@@ -19,8 +17,12 @@ public class Test {
             p.phone = list.get(3);
             return p;
         };
-        List<Person> read = xlsxReader.read(new FileInputStream("C:/Work/test.xlsx"), asPerson);
-        System.out.println(read);
+        ExcelReader.Builder build = new ExcelReader.Builder().fromRow(1).rowLength(2).fromColumn(1).columnLength(2).build();
+        ExcelReader xlsxReader = new XlsxReader(build);
+
+        //List<Person> read = xlsxReader.read(new FileInputStream("C:/Work/test.xlsx"), asPerson);
+        List<List<String>> read1 = xlsxReader.read(new FileInputStream("C:/Work/test.xlsx"));
+        System.out.println(read1);
     }
 
     static class Person {
