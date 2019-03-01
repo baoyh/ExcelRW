@@ -14,4 +14,10 @@ public abstract class Assert {
             throw new ExcelRWException("this argument must not be null");
         }
     }
+
+    public static void notNull(Object object, String message) throws ExcelRWException {
+        if (object == null) {
+            throw new ExcelRWException(message);
+        }
+    }
 }

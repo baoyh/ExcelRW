@@ -1,13 +1,10 @@
-package read;
-
 import annotation.Column;
 import annotation.SimpleExcel;
 import bean.Person;
+import convert.NumberConverter;
+import convert.StringConverter;
 import exception.ExcelRWException;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.beans.IntrospectionException;
@@ -38,17 +35,31 @@ public class ReadPerson {
                 T object = clazz.newInstance();
                 for (Field field : fields) {
                     field.setAccessible(true);
+                    Class<?> type = field.getType();
                     Column column = field.getAnnotation(Column.class);
                     int index = column.index();
                     Cell cell = row.getCell(index);
                     PropertyDescriptor pd = new PropertyDescriptor(field.getName(), clazz);
                     Method method = pd.getWriteMethod();
-                    method.invoke(object, cell.toString());
+                    method.invoke(object, f(type, cell));
                 }
                 list.add(object);
             }
         }
         System.out.println(list);
         return list;
+    }
+
+    public static Object f(Class<?> type, Cell cell) {
+        CellType typeEnum = cell.getCellTypeEnum();
+        switch (typeEnum) {
+            case NUMERIC:
+                NumberConverter<?> numberConverter = new NumberConverter<>(type);
+                return numberConverter.convert(cell.getNumericCellValue());
+            case STRING:
+                StringConverter<?> stringConverter = new StringConverter<>(type);
+                return stringConverter.convert(cell.toString());
+        }
+        return null;
     }
 }
