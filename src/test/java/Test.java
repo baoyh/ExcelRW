@@ -1,46 +1,19 @@
-import exception.ExcelRWException;
+import bean.Person;
 import read.ExcelReader;
 import read.DefaultExcelReader;
 import type.Excel;
 
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.List;
-import java.util.function.Function;
 
 public class Test {
-    public static void main(String[] args) throws ExcelRWException, IOException {
-
-        Function<List<String>, Person> asPerson = list -> {
-            Person p = new Person();
-            p.name = list.get(0);
-            p.gender = list.get(1);
-            p.address = list.get(2);
-            p.phone = list.get(3);
-            return p;
-        };
-
-        ExcelReader.Builder build = new ExcelReader.Builder().fromRow(1).rowLength(2).fromColumn(1).columnLength(2).build();
+    public static void main(String[] args) throws Exception {
+        String path = "E:/test.xlsx";
+        ExcelReader.Builder build = new ExcelReader.Builder().type(Excel.XLSX).build();
         ExcelReader reader = new DefaultExcelReader(build);
-        List<List<String>> read1 = reader.read(new FileInputStream("C:/Work/test.xls"), Excel.XLS);
-        System.out.println(read1);
+//        List<Person> read = reader.read(new FileInputStream(path), Person.class);
+        List<List<String>> read = reader.read(new FileInputStream(path));
+        System.out.println(read);
     }
 
-    static class Person {
-        String name;
-        String phone;
-        String address;
-        String gender;
-
-
-        @Override
-        public String toString() {
-            return "Person{" +
-                    "name='" + name + '\'' +
-                    ", phone='" + phone + '\'' +
-                    ", address='" + address + '\'' +
-                    ", gender='" + gender + '\'' +
-                    '}';
-        }
-    }
 }

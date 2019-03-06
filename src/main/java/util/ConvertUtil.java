@@ -133,6 +133,18 @@ public abstract class ConvertUtil {
         }
     }
 
+    public static <T> T booleanConvert(Boolean flag, Class<T> targetClass) {
+        Assert.notNull(flag, "Flag must not be null");
+        Assert.notNull(targetClass, "Target class must not be null");
+        if (Boolean.class == targetClass || boolean.class == targetClass) {
+            return (T) flag;
+        }
+        else {
+            throw new IllegalArgumentException(
+                    "Cannot convert Boolean [" + flag + "] to target class [" + targetClass.getName() + "]");
+        }
+    }
+
     private static Date parseDate(String value) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date parse = null;

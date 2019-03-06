@@ -20,17 +20,11 @@ public abstract class ExcelReader {
         private int rowLength = -1;
         private int fromColumn = 0;
         private int columnLength = -1;
+        private Excel type = Excel.XLSX;
 
-        private Function<Cell, String> cellFunction = cell -> {
-            switch (cell.getCellTypeEnum()) {
-                case NUMERIC:
-                    return String.valueOf(cell.getNumericCellValue());
-                default:
-                    return cell.getStringCellValue();
-            }
-        };
+        private Function<Cell, String> cellFunction;
 
-        public Builder sheets(Function<Cell, String> cellFunction) throws ExcelRWException {
+        public Builder cellFunction(Function<Cell, String> cellFunction) throws ExcelRWException {
             Assert.notNull(cellFunction);
             this.cellFunction = cellFunction;
             return this;
@@ -66,6 +60,12 @@ public abstract class ExcelReader {
             return this;
         }
 
+        public Builder type(Excel type) throws ExcelRWException {
+            Assert.notNull(type);
+            this.type = type;
+            return this;
+        }
+
         public Builder build() {
             return this;
         }
@@ -94,12 +94,17 @@ public abstract class ExcelReader {
             return cellFunction;
         }
 
+        public Excel getType() {
+            return type;
+        }
     }
 
-    public abstract <R> List<R> read(InputStream in, Excel type, Function<List<String>, R> rowFunction) throws IOException, ExcelRWException;
+    public abstract <T> List<T> read(InputStream in, Function<List<String>, T> rowFunction) throws IOException, ExcelRWException;
 
-    public List<List<String>> read(InputStream in, Excel type) throws IOException, ExcelRWException {
-        return read(in, type, DEFAULT_ROW_FUNCTION);
+    public List<List<String>> read(InputStream in) throws IOException, ExcelRWException {
+        return read(in, DEFAULT_ROW_FUNCTION);
     }
+
+    public abstract  <T> List<T> read(InputStream in, Class<T> clazz) throws Exception;
 
 }
