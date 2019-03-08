@@ -101,10 +101,8 @@ public abstract class ExcelReader {
 
     public abstract <T> List<T> read(InputStream in, Function<List<String>, T> rowFunction) throws IOException, ExcelRWException;
 
-    public List<List<String>> read(InputStream in) throws IOException, ExcelRWException {
-        return read(in, DEFAULT_ROW_FUNCTION);
-    }
+    public List<List<String>> read(InputStream in) throws IOException, ExcelRWException { return read(in, DEFAULT_ROW_FUNCTION); }
 
-    public abstract  <T> List<T> read(InputStream in, Class<T> clazz) throws Exception;
+    public abstract <T> List<T> read(InputStream in, Class<T> clazz) throws Exception;
 
 }

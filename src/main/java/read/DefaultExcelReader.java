@@ -16,6 +16,7 @@ import util.Assert;
 import java.beans.PropertyDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -41,57 +42,28 @@ public final class DefaultExcelReader extends ExcelReader {
     public <T> List<T> read(InputStream in, Function<List<String>, T> function) throws IOException, ExcelRWException {
         Assert.notNull(function);
         Assert.notNull(in);
-        Workbook workbook = workbook(in, builder.getType());
+        List<Sheet> sheets = sheets(workbook(in, builder.getType()));
         List<T> list = new ArrayList<>();
-        List<String> sheets = builder.getSheets();
-        if (sheets != null && !sheets.isEmpty()) {
-            for (String sheetName : sheets) {
-                Sheet sheet = workbook.getSheet(sheetName);
-                list.addAll(readSheet(sheet, function));
-            }
-        } else {
-            for (Sheet sheet : workbook) {
-                list.addAll(readSheet(sheet, function));
-            }
+        for (Sheet sheet : sheets) {
+            list.addAll(readSheet(sheet, function));
         }
+        in.close();
         return list;
     }
 
-    @Override
     public <T> List<T> read(InputStream in, Class<T> clazz) throws Exception {
+        Assert.notNull(in);
+        Assert.notNull(clazz);
         if (!clazz.isAnnotationPresent(SimpleExcel.class)) {
             throw new ExcelRWException("Wrong class");
         }
+        constructorValidate(clazz);
+        List<Sheet> sheets = sheets(workbook(in, builder.getType()));
         List<T> list = new ArrayList<>();
-        Field[] fields = clazz.getDeclaredFields();
-        Workbook workbook = workbook(in, builder.getType());
-        for (Sheet sheet : workbook) {
-            for (Row row : sheet) {
-                T object = clazz.newInstance();
-                for (Field field : fields) {
-                    field.setAccessible(true);
-                    Class<?> fieldType = field.getType();
-                    if (!field.isAnnotationPresent(Column.class)) {
-                        continue;
-                    }
-                    Column column = field.getAnnotation(Column.class);
-                    int index = column.index();
-                    Cell cell = row.getCell(index);
-                    PropertyDescriptor pd = new PropertyDescriptor(field.getName(), clazz);
-                    Method method = pd.getWriteMethod();
-                    Class converter = column.converter();
-                    if (converter == Converter.class) {
-                        method.invoke(object, value(cell, fieldType));
-                    } else {
-                        Object o = converter.newInstance();
-                        Method method1 = converter.getMethod(Converter.class.getMethods()[0].getName(), String.class);
-                        Object invoke = method1.invoke(o, value(cell, String.class));
-                        method.invoke(object, invoke);
-                    }
-                }
-                list.add(object);
-            }
+        for (Sheet sheet : sheets) {
+            list.addAll(readSheet(sheet, clazz));
         }
+        in.close();
         return list;
     }
 
@@ -108,11 +80,37 @@ public final class DefaultExcelReader extends ExcelReader {
         return workbook;
     }
 
-    private <R> List<R> readSheet(Sheet sheet, Function<List<String>, R> function) {
-        List<R> list = new ArrayList<>();
-        if (builder.getRowLength() < 0) {
-            toRow = sheet.getLastRowNum() + 1;
+    private List<Sheet> sheets(Workbook workbook) {
+        List<Sheet> list = new ArrayList<>();
+        List<String> sheets = builder.getSheets();
+        if (sheets != null && !sheets.isEmpty()) {
+            for (String sheetName : sheets) {
+                list.add(workbook.getSheet(sheetName));
+            }
+        } else {
+            for (Sheet sheet : workbook) {
+                list.add(sheet);
+            }
         }
+        return list;
+    }
+
+    private <T> List<T> readSheet(Sheet sheet, Class<T> clazz) throws Exception {
+        List<T> list = new ArrayList<>();
+        toRow = getToRow(sheet);
+        for (int i = builder.getFromRow(); i < toRow; i++) {
+            Row row = sheet.getRow(i);
+            if (row == null) {
+                break;
+            }
+            list.add(readRow(row, clazz));
+        }
+        return list;
+    }
+
+    private <T> List<T> readSheet(Sheet sheet, Function<List<String>, T> function) {
+        List<T> list = new ArrayList<>();
+        toRow = getToRow(sheet);
         for (int i = builder.getFromRow(); i < toRow; i++) {
             Row row = sheet.getRow(i);
             if (row == null) {
@@ -123,11 +121,9 @@ public final class DefaultExcelReader extends ExcelReader {
         return list;
     }
 
-    private <R> R readRow(Row row, Function<List<String>, R> function) {
-        if (builder.getColumnLength() < 0) {
-            toColumn = row.getLastCellNum() + 1;
-        }
+    private <T> T readRow(Row row, Function<List<String>, T> function) {
         List<String> list = new ArrayList<>();
+        toColumn = getToColumn(row);
         for (int i = builder.getFromColumn(); i < toColumn; i++) {
             Cell cell = row.getCell(i);
             if (cell != null) {
@@ -135,6 +131,57 @@ public final class DefaultExcelReader extends ExcelReader {
             }
         }
         return function.apply(list);
+    }
+
+    private <T> T readRow(Row row, Class<T> clazz) throws Exception {
+        T target = clazz.newInstance();
+        Field[] fields = clazz.getDeclaredFields();
+        for (Field field : fields) {
+            field.setAccessible(true);
+            if (!field.isAnnotationPresent(Column.class)) {
+                continue;
+            }
+            Column column = field.getAnnotation(Column.class);
+            int index = column.index();
+            Cell cell = row.getCell(index);
+            Method writeMethod = new PropertyDescriptor(field.getName(), clazz).getWriteMethod();
+            Class converter = column.converter();
+            if (converter == Converter.class) {
+                writeMethod.invoke(target, value(cell, field.getType()));
+            } else {
+                constructorValidate(converter);
+                Object invoke = converter.getMethod(Converter.class.getMethods()[0].getName(), String.class).invoke(converter.newInstance(), value(cell, String.class));
+                writeMethod.invoke(target, invoke);
+            }
+        }
+        return target;
+    }
+
+    private int getToRow(Sheet sheet) {
+        if (builder.getRowLength() < 0) {
+            toRow = sheet.getLastRowNum() + 1;
+        }
+        return toRow;
+    }
+
+    private int getToColumn(Row row) {
+        if (builder.getColumnLength() < 0) {
+            toColumn = row.getLastCellNum() + 1;
+        }
+        return toColumn;
+    }
+
+    private <T> void constructorValidate(Class<T> clazz) {
+        boolean flag = false;
+        Constructor<?>[] constructors = clazz.getConstructors();
+        for (Constructor<?> constructor : constructors) {
+            if (constructor.getParameterCount() == 0) {
+                flag = true;
+            }
+        }
+        if (!flag) {
+            throw new ExcelRWException("A parametric constructor method must be provided");
+        }
     }
 
     private Object value(Cell cell, Class<?> type) {

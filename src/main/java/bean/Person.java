@@ -105,6 +105,6 @@ public class Person {
                 ", count=" + count +
                 ", s='" + s + '\'' +
                 ", ss='" + ss + '\'' +
-                '}';
+                '}' + "\n";
     }
 }
